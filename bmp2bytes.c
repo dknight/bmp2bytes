@@ -77,6 +77,7 @@ unsigned char *parse_bmp(char *fname, int *_w, int *_h,
   }
 
   // In 1-bit image rows have 4 bytes border.
+  // 2-bit images and more have colour in every byte.
   int lineSize = (infoheader.width / 32) * 4;
   if (infoheader.width % 32) {
     lineSize += 4;
