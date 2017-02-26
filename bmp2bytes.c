@@ -12,7 +12,10 @@
 *   Eg2. bmp2bytes test16x16.bmp r
 *   Eg3. bmp2bytes test16x16.bmp
 *
+* r - reverse rows
+* i - invert image
 * r and i argument can be any values except NULL.
+*
 * TODO: for better usage use GCC library getopt.
 */
 

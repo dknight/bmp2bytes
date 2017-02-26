@@ -14,6 +14,10 @@ bmp2bytes <filename> [r [i]]
 * Eg2. bmp2bytes test16x16.bmp r
 * Eg3. bmp2bytes test16x16.bmp
 
+**r** - reverse rows<br>
+**i** - invert image<br>
+**r** and **i** argument can be any values except NULL.
+
 ### Image
 ![Test Bitmap](https://raw.githubusercontent.com/dknight/bmp2bytes/master/test_girl.bmp)
 
