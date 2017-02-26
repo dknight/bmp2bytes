@@ -1,6 +1,6 @@
 /*
 * bmp2bytes
-* Converts 1-bit bitmap image (BMP format) to C byte array.
+* Converts 1-bit monochrome bitmap image (BMP format) to C byte array.
 *
 * By Dmitri Smirnov <smirnov.dmitri@gmail.com>
 * 2017-02-27
@@ -12,8 +12,8 @@
 *   Eg2. bmp2bytes test16x16.bmp r
 *   Eg3. bmp2bytes test16x16.bmp
 *
-*   r and i argument can be any values except NULL.
-*   TODO: for better usage use GCC library getopt.
+* r and i argument can be any values except NULL.
+* TODO: for better usage use GCC library getopt.
 */
 
 #include <stdio.h>
@@ -44,7 +44,7 @@ void puterr(char* msg) {
  *  Parses 1-bit bitmap file.
  */
 unsigned char *parse_bmp(char *fname, int *_w, int *_h,
-                          char *_order, char *_invert) {
+                         char *_order, char *_invert) {
 
   BMPHEADER header;
   BMPINFOHEADER infoheader;
@@ -81,6 +81,7 @@ unsigned char *parse_bmp(char *fname, int *_w, int *_h,
   if (infoheader.width % 32) {
     lineSize += 4;
   }
+
   // Is this wrong?
   //int lineSize = (infoheader.width / 8 + (infoheader.width / 8) % 4);
   int fileSize = lineSize * infoheader.height;
@@ -98,13 +99,13 @@ unsigned char *parse_bmp(char *fname, int *_w, int *_h,
     exit(EXIT_ERR_MEMORY_ALLOCATION);
   }
 
-  //move file point to the begging of bitmap data
+  // Move file point to the begging of bitmap data
   fseek(fp, header.offset, SEEK_SET);
 
-  //read in the bitmap image data
+  // Read in the bitmap image data
   fread(data, 1 , fileSize, fp);
 
-  //make sure bitmap image data was read
+  // Make sure bitmap image data was read
   if (data == NULL) {
     fclose(fp);
     puterr("Cannot read image data");
@@ -134,7 +135,6 @@ unsigned char *parse_bmp(char *fname, int *_w, int *_h,
     }
   }
 
-  
   fclose(fp);
   free(data);
   *_w = infoheader.width;
@@ -151,7 +151,7 @@ int main(int argc, char *argv[]) {
   unsigned char* img;
 
   if (argc < 2) {
-    puterr("Please enter file name as 1st arguments");
+    puterr("Please enter file name as 1st argument");
     return 1;
   }
 
@@ -159,12 +159,12 @@ int main(int argc, char *argv[]) {
   for(i = 0, rev_i = h * (w/8)-1; i < h * (w/8); i++, rev_i--) {
     printf("0x%02X", img[rev_i]);
 
-    // Dont print last comma
+    // Dont print last comma??
     // if (i != h * (w/8)-1) printf(",");
 
     printf(",");
 
-    // Print new line
+    // Print new line every row to get better readability on output.
     if ((i+1) % (w/8) ==0) {
       printf("\n");
     }
