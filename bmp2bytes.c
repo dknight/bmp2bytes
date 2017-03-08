@@ -74,7 +74,7 @@ unsigned char *parse_bmp(char *fname, int *_w, int *_h,
   BMPINFOHEADER infoheader;
   unsigned char *img;
   unsigned char *data;
-  int i, j, rev_j, pos, ipos;
+  int i, j, rev_j, pos, ipos, tmp_w;
 
   FILE *fp = fopen(fname, "rb");
   if (fp == NULL) {
@@ -139,8 +139,13 @@ unsigned char *parse_bmp(char *fname, int *_w, int *_h,
 
   // Here you can specity byte order.
   ipos = 0;
+  if (infoheader.width < 8) {
+    tmp_w = 8;
+  } else {
+    tmp_w = infoheader.width;
+  }
   for (j = 0, rev_j = infoheader.height-1;j < infoheader.height; j++, rev_j--) {
-    for (i = infoheader.width/8-1; i >= 0; i--) {
+    for (i = tmp_w/8-1; i >= 0; i--) {
 
       // Revere byte order or not
       if (_order == NULL) {
@@ -162,7 +167,7 @@ unsigned char *parse_bmp(char *fname, int *_w, int *_h,
 
   fclose(fp);
   free(data);
-  *_w = infoheader.width;
+  *_w = tmp_w;
   *_h = infoheader.height;
   return img;
 }
