@@ -52,9 +52,8 @@
 #define EXIT_ERR_FILE_DOESNT_EXISTS   1
 #define EXIT_ERR_FILE_NOT_BITMAP      2
 #define EXIT_ERR_MEMORY_ALLOCATION    3
-#define EXIT_ERR_MEMORY_ALLOCATION    4
-#define EXIT_ERR_READ                 5
-#define EXIT_ERR_1BIT_SUPPORTED       6
+#define EXIT_ERR_READ                 4
+#define EXIT_ERR_1BIT_SUPPORTED       5
 
 /**
  *  Prints errors text
