@@ -3,187 +3,60 @@
 //
 // bmp2bytes
 //
-// Converts 1-bit monochrome bitmap image (BMP format) to C byte array as string.
+// version 2
+//
+// Converts 1-bit monochrome bitmap image (BMP format) to string
+// and outputs it to `stdout`. Where data is require as text input.
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <stdbool.h>
+#include <stdint.h>
 #include "bitmap.h"
 
-// Exit codes
-#define EXIT_ERR_FILE_DOESNT_EXISTS	1
-#define EXIT_ERR_FILE_NOT_BITMAP	2
-#define EXIT_ERR_MEMORY_ALLOCATION	3
-#define EXIT_ERR_READ				4
-#define EXIT_ERR_1BIT_SUPPORTED		5
+uint8_t check_error(char*);
+FILE* read_file(char*, char*);
+BMPImage* parse_bmp(char*, uint8_t, uint8_t, char*);
+void parse_bmp_header(BMPImage*, FILE*, char*);
+void parse_bmp_data(BMPImage*, FILE*, char*);
+void print_meta(BMPImage*);
+int32_t adjust_width(int32_t);
+void check_allocation(void*, char*);
+long calc_line_size(BMPImage*);
+void usage();
 
-/**
- *  Prints errors text
- * TODO report stderr
- */
-void puterr(char* msg) {
-	printf("%s\n", msg);
-}
-
-// Read header information
-void read_header(FILE *fp, BMPHeader *header) {
-	fread(header, sizeof(BMPHeader), 1, fp);
-}
-
-FILE *get_file_pointer(char *filename) {
-	FILE *fp = fopen(filename, "rb");
-	if (fp == NULL) {
-		printf("%s\n", filename);
-		puterr("File does not exists of cannot be opened.");
-		exit(EXIT_ERR_FILE_DOESNT_EXISTS);
-	}
-	return fp;
-}
-
-/**
- *  Parses 1-bit bitmap file.
- */
-unsigned char *parse_bmp(
-	char *filename,
-	int *width,
-	int *height,
-	bool reverseBytes,
-	bool invert
-) {
-	BMPHeader header;
-	unsigned char *img, *data;
-	int i, j, rev_j, pos, ipos, tmp_w;
-
-	FILE *fp = get_file_pointer(filename);
-	read_header(fp, &header);
-
-	// Check that this is Bitmap file.
-	if (header.type != BITMAP_MAGIC_IDENTIFIER) {
-		fclose(fp);
-		puterr("File isn't bitmap image. Only BMP files are supported.");
-		exit(EXIT_ERR_FILE_NOT_BITMAP);
-	}
-
-	if (header.bits != 1) {
-		fclose(fp);
-		puterr("Only 1-bit monochrome bitmap files are supported.");
-		exit(EXIT_ERR_1BIT_SUPPORTED);
-	}
-
-	// In 1-bit image rows have 4 bytes border.
-	// 2-bit images and more have color in every byte.
-	int lineSize = (header.width / 32) * 4;
-	if (header.width % 32) {
-		lineSize += 4;
-	}
-
-	// Is this wrong?
-	//int lineSize = (header.width / 8 + (header.width / 8) % 4);
-	int fileSize = lineSize * header.height;
-
-	//allocate enough memory for the bitmap image data
-	data = malloc(fileSize);
-	img = malloc(header.width * header.height);
-
-	// Verify memory allocation
-	if (!img || !data) {
-		free(img);
-		free(data);
-		puterr("Cannot allocate memory");
-		fclose(fp);
-		exit(EXIT_ERR_MEMORY_ALLOCATION);
-	}
-
-	// Move file point to the begging of bitmap data
-	fseek(fp, header.offset, SEEK_SET);
-
-	// Read in the bitmap image data
-	fread(data, 1 , fileSize, fp);
-
-	// Make sure bitmap image data was read
-	if (data == NULL) {
-		fclose(fp);
-		puterr("Cannot read image data");
-		exit(EXIT_ERR_READ);
-	}
-
-	// Here you can specify byte order.
-	ipos = 0;
-	if (header.width < 8) {
-		tmp_w = 8;
-	} else {
-		tmp_w = header.width;
-	}
-	for (j = 0, rev_j = header.height - 1; j < header.height; j++, rev_j--) {
-		for (i = tmp_w/8 - 1; i >= 0; i--) {
-			// Revere byte order
-			if (reverseBytes == true) {
-				pos = rev_j*lineSize + i;
-			} else {
-				pos = j*lineSize + i;
-			}
-
-			// Invert image
-			if (invert == true) {
-				img[ipos] = data[pos];
-			} else {
-				img[ipos] = 0xFF - data[pos];
-			}
-			ipos++;
-		}
-	}
-
-	fclose(fp);
-	free(data);
-	*width = tmp_w;
-	*height = header.height;
-	return img;
-}
-
-void print_meta(BMPHeader *header) {
-	printf("type %d\n", header->type);
-	printf("size %d\n", header->size);
-	printf("reserved1 %d\n", header->reserved1);
-	printf("reserved2 %d\n", header->reserved2);
-	printf("offset %d\n", header->offset);
-	printf("dibheadersize %d\n", header->dibheadersize);
-	printf("width %d\n", header->width);
-	printf("height %d\n", header->height);
-	printf("planes %d\n", header->planes);
-	printf("bits %d\n", header->bits);
-	printf("compression %d\n", header->compression);
-	printf("imagesize %d\n", header->imagesize);
-	printf("xres %d\n", header->xres);
-	printf("yres %d\n", header->yres);
-	printf("ncolours %d\n", header->ncolors);
-	printf("importantcolours %d\n", header->importantcolors);
-}
-
-int main(int argc, char **argv) {
-	int i, rev_i, w, h, opt;
-	unsigned char* img;
+int main(int argc, char** argv) {
+	int i, rev_i, opt;
+	uint32_t w, h;
+	BMPImage* image;
 	char* filename = NULL;
-	bool reverseBytes = false;
-	bool invert = false;
-	bool printMeta = false;
+	uint8_t reverse = 0;
+	uint8_t invert = 0;
+	uint8_t meta = 0;
+	char* error = NULL;
+	char* format = "0x%02X";
+	char* delim = ",";
 
-	while((opt = getopt(argc, argv, "mrih")) != -1) {
-		switch(opt)
-		{
+	while((opt = getopt(argc, argv, "mrihf:d:")) != -1) {
+		switch(opt) {
 			case 'm':
-				printMeta = true;
-				break;
-			case 'h':
-				printf("usage %c\n", opt);
-				return 0;
+				meta = 1;
 				break;
 			case 'i':
-				invert = true;
+				invert = 1;
 				break;
 			case 'r':
-				reverseBytes = true;
+				reverse = 1;
 				break;
+			case 'f':
+				format = optarg;
+				break;
+			case 'd':
+				delim = optarg;
+				break;
+			case 'h':
+				usage();
+				return EXIT_SUCCESS;
 			default:
 				break;
 		}
@@ -199,27 +72,221 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (filename == NULL) {
-		puterr("file missing");
-		return EXIT_ERR_FILE_DOESNT_EXISTS;
+	if (access(filename, F_OK) != 0) {
+		error = "file missing";
+	}
+	if (check_error(error)) {
+		return EXIT_FAILURE;
 	}
 
-	img = parse_bmp(filename, &w, &h, reverseBytes, invert);
-	for(i = 0, rev_i = h*(w/8) - 1; i < h*(w/8); i++, rev_i--) {
-		printf("0x%02X", img[rev_i]);
+	image = parse_bmp(filename, reverse, invert, error);
+	check_error(error);
 
-		// Dont print last comma??
-		// if (i != h * (w/8)-1) printf(",");
+	w = adjust_width(image->header.width);
+	h = image->header.height;
 
-		printf(",");
+	if (meta == 1) {
+		print_meta(image);
+		return EXIT_SUCCESS;
+	}
+
+	for (i = h*(w/8) - 1; i >= 0 ; i--) {
+		printf(format, image->data[i]);
+		// Do not print last comma?
+		if (i != 0) {
+			printf(delim);
+		}
 
 		// Print new line every row to get better readability on output.
-		if ((i+1) % (w/8) ==0) {
+		if (i % (w/8) == 0) {
 			printf("\n");
 		}
 	}
 
-	printf("\n");
-	free(img);
+	free(image);
+	return EXIT_SUCCESS;
+}
+
+// In 1-bit image rows have 4 bytes border.
+// 2-bit images and more have color in every byte.
+long calc_line_size(BMPImage* image) {
+	long len = (image->header.width / 32) * 4;
+	if (image->header.width % 32) {
+		len += 4;
+	}
+	return len;
+
+}
+uint8_t check_error(char* error) {
+	if (error != NULL) {
+		fprintf(stderr, "%s\n", error);
+		return 1;
+	}
 	return 0;
+}
+
+void check_allocation(void* cs, char* error) {
+	if (cs == NULL) {
+		error = "failed allocate memory";
+	}
+}
+
+FILE* read_file(char *filename, char* error) {
+	FILE* fp = fopen(filename, "rb");
+	if (fp == NULL) {
+		sprintf(error, "%s cannot be opened.", filename);
+		return NULL;
+	}
+	return fp;
+}
+
+// Minimum width size is 8.
+int32_t adjust_width(int32_t w) {
+	if (w < 8) {
+		return 8;
+	}
+	return w;
+}
+
+void parse_bmp_header(BMPImage* image, FILE* fp, char* error) {
+	int status = fread(&image->header, sizeof(BMPHeader), 1, fp);
+	if (status != 0) {
+		error = "cannot read file";
+		return;
+	}
+
+	if (image->header.type != BITMAP_IDENTIFIER) {
+		error = "file is not bitmap image";
+		return;
+	}
+
+	if (image->header.bits != 1) {
+		error = "only 1-bit monochrome bitmap files are supported.";
+		return;
+	}
+}
+
+void parse_bmp_data(BMPImage* image, FILE* fp, char* error) {
+	// Move file point to the begging of bitmap data
+	int status = fseek(fp, image->header.offset, SEEK_SET);
+	if (status != 0) {
+		error = "failed to set file offset";
+	}
+
+	// Read in the bitmap image data
+	// TODO wrong? check with girl diff
+	status = fread(image->data, image->header.size, 1, fp);
+	if (status != 0) {
+		error = "failed to read image data";
+	}
+}
+
+BMPImage* parse_bmp(
+	char* filename,
+	uint8_t reverse,
+	uint8_t invert,
+	char* error
+) {
+	int32_t j, i, rev_i, pos, dw;
+	int32_t ipos = 0;
+	BMPImage* image = malloc(sizeof(BMPImage));
+	check_allocation(image, error);
+
+	FILE* fp = read_file(filename, error);
+	if (check_error(error)) {
+		fclose(fp);
+		free(image);
+		return NULL;
+	}
+
+	parse_bmp_header(image, fp, error);
+	if (check_error(error)) {
+		fclose(fp);
+		free(image);
+		return NULL;
+	}
+	dw = adjust_width(image->header.width);
+
+	// In 1-bit image rows have 4 bytes border.
+	// 2-bit images and more have color in every byte.
+	long line_size = calc_line_size(image);
+	long martix_size = line_size * image->header.height;
+
+	 // Allocate enough memory for the bitmap image data.
+	image->data = malloc(martix_size);
+	uint8_t* temp_data = malloc(martix_size);
+
+	check_allocation(image->data, error);
+	if (check_error(error)) {
+		fclose(fp);
+		free(image);
+		return NULL;
+	}
+
+	parse_bmp_data(image, fp, error);
+	if (check_error(error)) {
+		fclose(fp);
+		free(image);
+		return NULL;
+	}
+
+	ipos = 0;
+	for (
+		i = 0, rev_i = image->header.height - 1;
+		i < image->header.height;
+		i++, rev_i--
+	) {
+		for (j = dw/8 - 1; j >= 0; j--) {
+			// Revere byte order
+			if (reverse == 1) {
+				pos = rev_i*line_size + j;
+			} else {
+				pos = i*line_size + j;
+			}
+
+			// Invert image
+			if (invert == 1) {
+				temp_data[ipos] = image->data[pos];
+			} else {
+				temp_data[ipos] = 0xFF - image->data[pos];
+			}
+			ipos++;
+		}
+	}
+	image->data = temp_data;
+	free(temp_data);
+	fclose(fp);
+	return image;
+}
+
+void print_meta(BMPImage* image) {
+	printf("type %d\n", image->header.type);
+	printf("size %d\n", image->header.size);
+	printf("reserved1 %d\n", image->header.reserved1);
+	printf("reserved2 %d\n", image->header.reserved2);
+	printf("offset %d\n", image->header.offset);
+	printf("dibheadersize %d\n", image->header.dibheadersize);
+	printf("width %d\n", image->header.width);
+	printf("height %d\n", image->header.height);
+	printf("planes %d\n", image->header.planes);
+	printf("bits %d\n", image->header.bits);
+	printf("compression %d\n", image->header.compression);
+	printf("imagesize %d\n", image->header.imagesize);
+	printf("xres %d\n", image->header.xres);
+	printf("yres %d\n", image->header.yres);
+	printf("ncolours %d\n", image->header.ncolors);
+	printf("importantcolours %d\n", image->header.importantcolors);
+}
+
+void usage() {
+	printf("bmp2bytes usage:\n");
+	printf("bmp2tpues [-mrihfd] <file.bmp>\n");
+	printf("  -h: prints usage;\n");
+	printf("  -r: reverse rows;\n");
+	printf("  -i: invert image bits;\n");
+	printf("  -m: prints meta data of the image and exit;\n");
+	printf("  -f <string>: format of the output, any number qualifier ");
+	printf("for `printf` function is accepted.\n");
+	printf("    Examples: %%d, %%X, %%02X, etc. Default: 0x%%02X\n");
+	printf("  -d: delimiter of the output. Default: \",\" (comma).\n");
 }

@@ -1,27 +1,40 @@
 # bmp2bytes
 
-Converts 1-bit bitmap image (BMP format) to C byte array.
+Converts 1-bit monochrome bitmap image (BMP format) to string
+and outputs it to `stdout`. Where data is require as text input.
 
-Probably goint to use this for next Arduino project with [TVOut library](https://github.com/Avamander/arduino-tvout).
+Used in Arduino project with [TVOut library](https://github.com/Avamander/arduino-tvout).
+
+This is version 2.
+
+To get legacy version 1 check out [v1-legacy](https://github.com/dknight/bmp2bytes/tree/v1-legacy) branch.
+
+## Install
+
+```sh
+make build
+```
 
 ## Usage
 
 ```
-bmp2bytes <filename> [r [i]]
+bmp2tpues [-mrihfd] <file.bmp>
 ```
+- **-h**: Prints usage;
+- **-r**: reverse rows;
+- **-i**: invert image bits;
+- **-m**: prints meta data of the image and exit;
+- **-f** <string>: format of the output, any number qualifier for `printf` function is accepted. Examples: %d, %X, %02X, etc. Default: 0x%02X;
+- **-d**: delimiter of the output. Default: "," (comma).
 
-* Eg1. bmp2bytes test16x16.bmp r i
-* Eg2. bmp2bytes test16x16.bmp r
-* Eg3. bmp2bytes test16x16.bmp
-
-**r** - reverse rows<br>
-**i** - invert image<br>
-**r** and **i** argument can be any values except NULL.
+## Example
 
 ### Image
+
 ![Test Bitmap](https://raw.githubusercontent.com/dknight/bmp2bytes/master/test_girl.bmp)
 
 ### Output
+
 ```
 0xFF,0xFE,0x00,0x00,0x5F,0xFF,0xFF,0x6A,0x80,0x00,0x00,0x7F,0xFA,0xAA,0xAD,
 0xDD,0xFD,0x00,0x00,0x35,0xBB,0xB5,0xB5,0x00,0x00,0x00,0x7F,0x7F,0x55,0x55,

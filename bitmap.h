@@ -1,4 +1,4 @@
-#define BITMAP_MAGIC_IDENTIFIER 0x4D42
+#define BITMAP_IDENTIFIER 0x4D42
 
 #include <stdint.h>
 
@@ -24,8 +24,8 @@ typedef struct {
 } BMPHeader;
 
 typedef struct {
-	BMPHeader *header;
-	uint8_t *data;
+	BMPHeader header;
+	unsigned char *data;
 
 } BMPImage;
 #pragma pack(pop)
