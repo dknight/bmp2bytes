@@ -100,12 +100,11 @@ int main(int argc, char** argv) {
 		if (i != 0) {
 			printf(delim);
 		}
-
-		if (newline == 1) {
-			print("\n")
-		}
 	}
 
+	if (newline == 1) {
+		printf("\n");
+	}
 	free(image);
 	return EXIT_SUCCESS;
 }
@@ -291,5 +290,5 @@ void usage() {
 	printf("for `printf` function is accepted.\n");
 	printf("    Examples: %%d, %%X, %%02X, etc. Default: 0x%%02X\n");
 	printf("  -d: delimiter of the output. Default: \",\" (comma).\n");
-	printf("  -n: print new line at the end of output");
+	printf("  -n: print new line at the end of output\n");
 }
