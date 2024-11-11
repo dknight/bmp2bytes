@@ -3,7 +3,7 @@
 //
 // bmp2bytes
 //
-// version 2
+// Version 2.
 //
 // Converts 1-bit monochrome bitmap image (BMP format) to string
 // and outputs it to `stdout`. Where data is require as text input.
@@ -33,12 +33,16 @@ int main(int argc, char** argv) {
 	uint8_t reverse = 0;
 	uint8_t invert = 0;
 	uint8_t meta = 0;
+	uint8_t newline = 0;
 	char* error = NULL;
 	char* format = "0x%02X";
 	char* delim = ",";
 
-	while((opt = getopt(argc, argv, "mrihf:d:")) != -1) {
+	while((opt = getopt(argc, argv, "mrihnf:d:")) != -1) {
 		switch(opt) {
+			case 'n':
+				newline = 1;
+				break;
 			case 'm':
 				meta = 1;
 				break;
@@ -90,16 +94,15 @@ int main(int argc, char** argv) {
 		return EXIT_SUCCESS;
 	}
 
-	for (i = h*(w/8) - 1; i >= 0 ; i--) {
+	for (i = h *( w / 8) - 1; i >= 0 ; i--) {
 		printf(format, image->data[i]);
 		// Do not print last comma?
 		if (i != 0) {
 			printf(delim);
 		}
 
-		// Print new line every row to get better readability on output.
-		if (i % (w/8) == 0) {
-			printf("\n");
+		if (newline == 1) {
+			print("\n")
 		}
 	}
 
@@ -174,7 +177,6 @@ void parse_bmp_data(BMPImage* image, FILE* fp, char* error) {
 	}
 
 	// Read in the bitmap image data
-	// TODO wrong? check with girl diff
 	status = fread(image->data, image->header.size, 1, fp);
 	if (status != 0) {
 		error = "failed to read image data";
@@ -289,4 +291,5 @@ void usage() {
 	printf("for `printf` function is accepted.\n");
 	printf("    Examples: %%d, %%X, %%02X, etc. Default: 0x%%02X\n");
 	printf("  -d: delimiter of the output. Default: \",\" (comma).\n");
+	printf("  -n: print new line at the end of output");
 }

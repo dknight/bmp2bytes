@@ -25,13 +25,14 @@ bmp2tpues [-mrihfd] <file.bmp>
 - **-i**: invert image bits;
 - **-m**: prints meta data of the image and exit;
 - **-f** <string>: format of the output, any number qualifier for `printf` function is accepted. Examples: %d, %X, %02X, etc. Default: 0x%02X;
-- **-d**: delimiter of the output. Default: "," (comma).
+- **-d**: delimiter of the output. Default: "," (comma);
+- **-n**: print new line after the outpit.
 
 ## Example
 
 ### Image
 
-![Test Bitmap](https://raw.githubusercontent.com/dknight/bmp2bytes/master/test_girl.bmp)
+![Test Bitmap](https://raw.githubusercontent.com/dknight/bmp2bytes/master/tests/girl.bmp)
 
 ### Output
 
